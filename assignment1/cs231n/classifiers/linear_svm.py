@@ -28,14 +28,28 @@ def svm_loss_naive(W, X, y, reg):
     num_train = X.shape[0]
     loss = 0.0
     for i in range(num_train):
-        scores = X[i].dot(W)
+        scores = X[i].dot(W) # 这里输出C维向量。这里面的真值与非真值的导数还不一样
+        # 真值由y[i]来索引
         correct_class_score = scores[y[i]]
         for j in range(num_classes):
             if j == y[i]:
-                continue
-            margin = scores[j] - correct_class_score + 1 # note delta = 1
-            if margin > 0:
-                loss += margin
+                # 如果是真值，按真值的求导公式求它的偏导，偏导是一个D维向量，与X同
+                # 公式见讲义
+                full_scores = (scores - correct_class_score + 1) # C维向量，多算了一个delta
+                full_scores[y[i]] -= 1 # 把多算的delta减掉
+                dy_i = -X[i] * np.sum(np.where(full_scores<0, 0, 1)) # 求得y_i的偏导
+                dW[:, y[i]] += dy_i
+                dW[:, y[i]] += reg * 2 * W[:, y[i]] # 正则项
+            else:
+                # 如果不是真值                
+                margin = scores[j] - correct_class_score + 1 # note delta = 1
+                if margin > 0:
+                    loss += margin
+                    dy_j = 1 * X[i]
+                else:
+                    dy_j = 0 * X[i]
+                dW[:, j] += dy_j
+                dW[:, j] += reg * 2 * W[:, j] # 正则项
 
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
@@ -54,7 +68,7 @@ def svm_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dW /= num_train
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
@@ -66,7 +80,12 @@ def svm_loss_vectorized(W, X, y, reg):
     """
     Structured SVM loss function, vectorized implementation.
 
-    Inputs and outputs are the same as svm_loss_naive.
+    Inputs:
+    - W: A numpy array of shape (D, C) containing weights.
+    - X: A numpy array of shape (N, D) containing a minibatch of data.
+    - y: A numpy array of shape (N,) containing training labels; y[i] = c means
+      that X[i] has label c, where 0 <= c < C.
+    - reg: (float) regularization strength
     """
     loss = 0.0
     dW = np.zeros(W.shape) # initialize the gradient as zero
@@ -77,8 +96,10 @@ def svm_loss_vectorized(W, X, y, reg):
     # result in loss.                                                           #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    num_train = X.shape[0]
+    scores_NxC = X.dot(W) # 每一个样本的分值，按行堆成矩阵
+    correct_Nx1 = scores_NxC[np.arange(num_train), y]
+    
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -93,7 +114,6 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
