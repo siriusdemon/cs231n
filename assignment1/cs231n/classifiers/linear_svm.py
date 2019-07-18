@@ -37,7 +37,7 @@ def svm_loss_naive(W, X, y, reg):
                 # 公式见讲义
                 full_scores = (scores - correct_class_score + 1) # C维向量，多算了一个delta
                 full_scores[y[i]] -= 1 # 把多算的delta减掉
-                dy_i = -X[i] * np.sum(np.where(full_scores<0, 0, 1)) # 求得y_i的偏导
+                dy_i = -X[i] * np.sum(np.where(full_scores<=0, 0, 1)) # 求得y_i的偏导
                 dW[:, y[i]] += dy_i
                 dW[:, y[i]] += reg * 2 * W[:, y[i]] # 正则项
             else:
@@ -97,9 +97,13 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     num_train = X.shape[0]
+    indexes = np.arange(num_train)
     scores_NxC = X.dot(W) # 每一个样本的分值，按行堆成矩阵
-    correct_Nx1 = scores_NxC[np.arange(num_train), y]
-    
+    correct_Nx1 = scores_NxC[indexes, y].reshape(num_train, 1) # 选出所有的y_i
+    scores_NxC = scores_NxC - correct_Nx1 + 1 # 针对y_i，多加了一个delta
+    scores_NxC[indexes, y] -= 1 # 减去多加的delta
+    loss = np.sum(np.where(scores_NxC < 0, 0, scores_NxC)) / num_train # max(0, x)的调用
+    loss += reg * np.sum(W * W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -113,7 +117,11 @@ def svm_loss_vectorized(W, X, y, reg):
     # loss.                                                                     #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+    margin_NxC = np.where(scores_NxC <= 0, 0, 1) 
+    correct_Nx1 = -np.sum(margin_NxC, axis=1) # 计算真值的系数
+    margin_NxC[indexes, y] = correct_Nx1 # 将真值的系数覆盖到原矩阵
+    dW = X.T.dot(margin_NxC) / num_train # DxC
+    dW += reg * 2 * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
